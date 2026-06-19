@@ -2,6 +2,7 @@ package com.rjnsdev.easyfin.ui.dashboard.collection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rjnsdev.easyfin.data.remote.ApiClientManager
 import com.rjnsdev.easyfin.data.remote.BaseItemDto
 import com.rjnsdev.easyfin.data.repository.MediaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,14 +17,23 @@ sealed class CollectionState {
 }
 
 class CollectionViewModel(
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val apiClientManager: ApiClientManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CollectionState>(CollectionState.Loading)
     val uiState: StateFlow<CollectionState> = _uiState.asStateFlow()
 
     init {
-        loadData()
+        viewModelScope.launch {
+            apiClientManager.api.collect { api ->
+                if (api != null) {
+                    loadData()
+                } else {
+                    _uiState.value = CollectionState.Error("No active server")
+                }
+            }
+        }
     }
 
     fun loadData() {

@@ -2,6 +2,7 @@ package com.rjnsdev.easyfin.ui.dashboard.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rjnsdev.easyfin.data.remote.ApiClientManager
 import com.rjnsdev.easyfin.data.remote.BaseItemDto
 import com.rjnsdev.easyfin.data.repository.MediaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +25,23 @@ data class MediaRow(
 )
 
 class ExploreViewModel(
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val apiClientManager: ApiClientManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ExploreState>(ExploreState.Loading)
     val uiState: StateFlow<ExploreState> = _uiState.asStateFlow()
 
     init {
-        loadData()
+        viewModelScope.launch {
+            apiClientManager.api.collect { api ->
+                if (api != null) {
+                    loadData()
+                } else {
+                    _uiState.value = ExploreState.Error("No active server")
+                }
+            }
+        }
     }
 
     fun loadData() {

@@ -93,7 +93,8 @@ fun MediaCarousel(title: String, items: List<BaseItemDto>, serverUrl: String, on
 fun MediaPosterCard(item: BaseItemDto, serverUrl: String, onPlay: (String) -> Unit) {
     // Basic image path builder.
     val imageUrl = if (item.ImageTags?.containsKey("Primary") == true) {
-        "${serverUrl}/Items/${item.Id}/Images/Primary"
+        val cleanUrl = serverUrl.trimEnd('/')
+        "${cleanUrl}/Items/${item.Id}/Images/Primary"
     } else null
 
     Card(

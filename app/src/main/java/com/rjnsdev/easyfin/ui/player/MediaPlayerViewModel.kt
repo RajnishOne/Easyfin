@@ -27,7 +27,8 @@ class MediaPlayerViewModel(
             val profile = secureStorage.activeProfile.firstOrNull()
             if (profile != null) {
                 // Jellyfin generic stream endpoint
-                val streamUrl = "${profile.url}/Videos/$itemId/stream?api_key=${profile.accessToken}&static=true"
+                val cleanUrl = profile.url.trimEnd('/')
+                val streamUrl = "${cleanUrl}/Videos/$itemId/stream?api_key=${profile.accessToken}&static=true"
                 _playerConfig.value = PlayerConfig(
                     url = streamUrl,
                     accessToken = profile.accessToken,

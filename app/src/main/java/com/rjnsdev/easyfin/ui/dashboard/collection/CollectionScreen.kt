@@ -70,7 +70,8 @@ fun CollectionScreen(viewModel: CollectionViewModel = koinViewModel()) {
 @Composable
 fun LibraryCard(view: BaseItemDto, serverUrl: String) {
     val imageUrl = if (view.ImageTags?.containsKey("Primary") == true) {
-        "${serverUrl}/Items/${view.Id}/Images/Primary"
+        val cleanUrl = serverUrl.trimEnd('/')
+        "${cleanUrl}/Items/${view.Id}/Images/Primary"
     } else null
 
     Card(
