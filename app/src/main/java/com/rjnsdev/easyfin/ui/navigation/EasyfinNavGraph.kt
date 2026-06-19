@@ -31,11 +31,18 @@ fun EasyfinNavGraph(startDestination: String) {
                 },
                 onAddNewServer = {
                     navController.navigate("auth")
+                },
+                onPlay = { itemId ->
+                    navController.navigate("player/$itemId")
                 }
             )
         }
-        composable("player") {
-            MediaPlayerScreen()
+        composable(
+            route = "player/{itemId}",
+            arguments = listOf(androidx.navigation.navArgument("itemId") { type = androidx.navigation.NavType.StringType })
+        ) { backStackEntry ->
+            val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
+            MediaPlayerScreen(itemId = itemId, onNavigateUp = { navController.popBackStack() })
         }
     }
 }

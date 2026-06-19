@@ -23,7 +23,10 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExploreScreen(viewModel: ExploreViewModel = koinViewModel()) {
+fun ExploreScreen(
+    onPlay: (String) -> Unit,
+    viewModel: ExploreViewModel = koinViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
 
     Column(
@@ -56,7 +59,7 @@ fun ExploreScreen(viewModel: ExploreViewModel = koinViewModel()) {
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
                     items(state.latestMediaRows) { row ->
-                        MediaCarousel(title = row.title, items = row.items, serverUrl = state.serverUrl)
+                        MediaCarousel(title = row.title, items = row.items, serverUrl = state.serverUrl, onPlay = onPlay)
                     }
                 }
             }
@@ -65,7 +68,7 @@ fun ExploreScreen(viewModel: ExploreViewModel = koinViewModel()) {
 }
 
 @Composable
-fun MediaCarousel(title: String, items: List<BaseItemDto>, serverUrl: String) {
+fun MediaCarousel(title: String, items: List<BaseItemDto>, serverUrl: String, onPlay: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
         Text(
             text = title,
@@ -80,14 +83,14 @@ fun MediaCarousel(title: String, items: List<BaseItemDto>, serverUrl: String) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(items) { item ->
-                MediaPosterCard(item = item, serverUrl = serverUrl)
+                MediaPosterCard(item = item, serverUrl = serverUrl, onPlay = onPlay)
             }
         }
     }
 }
 
 @Composable
-fun MediaPosterCard(item: BaseItemDto, serverUrl: String) {
+fun MediaPosterCard(item: BaseItemDto, serverUrl: String, onPlay: (String) -> Unit) {
     // Basic image path builder.
     val imageUrl = if (item.ImageTags?.containsKey("Primary") == true) {
         "${serverUrl}/Items/${item.Id}/Images/Primary"
@@ -98,7 +101,7 @@ fun MediaPosterCard(item: BaseItemDto, serverUrl: String) {
             .width(120.dp)
             .height(180.dp)
             .clip(RoundedCornerShape(8.dp))
-            .clickable { /* TODO: Navigate to detail/player */ },
+            .clickable { onPlay(item.Id) },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

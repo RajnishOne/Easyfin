@@ -73,6 +73,7 @@ dependencies {
     // Media (Media3)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.media3.session)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)

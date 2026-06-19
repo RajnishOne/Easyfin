@@ -23,7 +23,8 @@ data class BottomNavItem(val route: String, val title: String, val icon: ImageVe
 @Composable
 fun DashboardScreen(
     onLogout: () -> Unit,
-    onAddNewServer: () -> Unit
+    onAddNewServer: () -> Unit,
+    onPlay: (String) -> Unit
 ) {
     val navController = rememberNavController()
     
@@ -36,7 +37,7 @@ fun DashboardScreen(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("explore") {
-                ExploreScreen()
+                ExploreScreen(onPlay = onPlay)
             }
             composable("collection") {
                 CollectionScreen()

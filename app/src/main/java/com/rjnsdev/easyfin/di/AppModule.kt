@@ -20,6 +20,7 @@ import com.rjnsdev.easyfin.ui.auth.AuthViewModel
 import com.rjnsdev.easyfin.ui.dashboard.collection.CollectionViewModel
 import com.rjnsdev.easyfin.ui.dashboard.explore.ExploreViewModel
 import com.rjnsdev.easyfin.ui.dashboard.settings.SettingsViewModel
+import com.rjnsdev.easyfin.ui.player.MediaPlayerViewModel
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 
@@ -35,8 +36,15 @@ val appModule = module {
     }
 
     single {
-        val logging = HttpLoggingInterceptor().apply {
+        val logging = HttpLoggingInterceptor { message ->
+            android.util.Log.d("EasyfinAPI", message)
+        }.apply {
+            // Only log bodies in debug mode, or keep it BODY for now
             level = HttpLoggingInterceptor.Level.BODY
+            
+            // Redact sensitive headers
+            redactHeader("Authorization")
+            redactHeader("X-Emby-Token")
         }
         OkHttpClient.Builder()
             .addInterceptor(logging)
@@ -52,6 +60,7 @@ val appModule = module {
     viewModelOf(::SettingsViewModel)
     viewModelOf(::ExploreViewModel)
     viewModelOf(::CollectionViewModel)
+    viewModelOf(::MediaPlayerViewModel)
 
     single {
         val secureStorage: SecureStorage = get()
