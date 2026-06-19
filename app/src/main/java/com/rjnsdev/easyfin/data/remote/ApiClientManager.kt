@@ -25,9 +25,30 @@ class ApiClientManager(
         CoroutineScope(Dispatchers.IO).launch {
             secureStorage.activeProfile.collect { profile ->
                 if (profile != null) {
+                    val authClient = okHttpClient.newBuilder()
+                        .addInterceptor { chain ->
+                            val requestBuilder = chain.request().newBuilder()
+                            
+                            val authHeaderPrefix = "MediaBrowser Client=\"Easyfin\", Device=\"Android\", DeviceId=\"device123\", Version=\"1.0\", Token=\"${profile.accessToken}\""
+                            val authHeader = if (profile.customHeader.isNotBlank()) {
+                                "$authHeaderPrefix, ${profile.customHeader}"
+                            } else {
+                                authHeaderPrefix
+                            }
+                            
+                            // Don't overwrite if it's already provided (e.g. AuthRepository login)
+                            if (chain.request().header("Authorization") == null) {
+                                requestBuilder.addHeader("Authorization", authHeader)
+                            }
+                            requestBuilder.addHeader("X-Emby-Token", profile.accessToken)
+                            
+                            chain.proceed(requestBuilder.build())
+                        }
+                        .build()
+
                     val retrofit = Retrofit.Builder()
                         .baseUrl(profile.url)
-                        .client(okHttpClient)
+                        .client(authClient)
                         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                         .build()
                     _api.value = retrofit.create(JellyfinApi::class.java)
