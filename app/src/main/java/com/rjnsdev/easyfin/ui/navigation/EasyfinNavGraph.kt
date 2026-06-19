@@ -9,10 +9,10 @@ import com.rjnsdev.easyfin.ui.dashboard.DashboardScreen
 import com.rjnsdev.easyfin.ui.player.MediaPlayerScreen
 
 @Composable
-fun EasyfinNavGraph() {
+fun EasyfinNavGraph(startDestination: String) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "auth") {
+    NavHost(navController = navController, startDestination = startDestination) {
         composable("auth") {
             AuthScreen(
                 onLoginSuccess = {

@@ -15,6 +15,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
+import com.rjnsdev.easyfin.MainViewModel
 import com.rjnsdev.easyfin.ui.auth.AuthViewModel
 import com.rjnsdev.easyfin.ui.dashboard.collection.CollectionViewModel
 import com.rjnsdev.easyfin.ui.dashboard.explore.ExploreViewModel
@@ -46,6 +47,7 @@ val appModule = module {
     
     singleOf(::AuthRepository)
     singleOf(::MediaRepository)
+    viewModelOf(::MainViewModel)
     viewModelOf(::AuthViewModel)
     viewModelOf(::SettingsViewModel)
     viewModelOf(::ExploreViewModel)

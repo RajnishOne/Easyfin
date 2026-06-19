@@ -73,13 +73,20 @@ fun AuthScreen(
         ) {
             
             // App Logo
-            Image(
-                painter = painterResource(id = R.mipmap.ic_launcher),
-                contentDescription = "App Logo",
+            Box(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(16.dp))
-            )
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Theaters,
+                    contentDescription = "App Logo",
+                    tint = Color.Black,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
             
             Spacer(modifier = Modifier.height(16.dp))
 
