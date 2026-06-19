@@ -11,6 +11,8 @@ import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
 
 private val Context.dataStore by preferencesDataStore(name = "easyfin_secure_prefs")
@@ -18,6 +20,7 @@ private val Context.dataStore by preferencesDataStore(name = "easyfin_secure_pre
 class SecureStorage(private val context: Context) {
 
     private val aead: Aead
+    private val json = Json { ignoreUnknownKeys = true }
 
     init {
         AeadConfig.register()
@@ -46,65 +49,94 @@ class SecureStorage(private val context: Context) {
         }
     }
 
-    suspend fun saveServerUrl(url: String) {
-        context.dataStore.edit { prefs ->
-            prefs[SERVER_URL_KEY] = encrypt(url)
+    // --- Profiles Management ---
+
+    val serverProfiles: Flow<List<ServerProfile>> = context.dataStore.data.map { prefs ->
+        val encryptedJson = prefs[SERVER_PROFILES_KEY] ?: return@map emptyList()
+        val decryptedJson = decrypt(encryptedJson) ?: return@map emptyList()
+        try {
+            json.decodeFromString<List<ServerProfile>>(decryptedJson)
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
-    val serverUrl: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[SERVER_URL_KEY]?.let { decrypt(it) }
+    val activeServerId: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[ACTIVE_SERVER_ID_KEY]?.let { decrypt(it) }
     }
 
-    suspend fun saveUsername(username: String) {
-        context.dataStore.edit { prefs ->
-            prefs[USERNAME_KEY] = encrypt(username)
+    val activeProfile: Flow<ServerProfile?> = context.dataStore.data.map { prefs ->
+        val activeId = prefs[ACTIVE_SERVER_ID_KEY]?.let { decrypt(it) } ?: return@map null
+        val encryptedJson = prefs[SERVER_PROFILES_KEY] ?: return@map null
+        val decryptedJson = decrypt(encryptedJson) ?: return@map null
+        try {
+            val profiles = json.decodeFromString<List<ServerProfile>>(decryptedJson)
+            profiles.find { it.id == activeId }
+        } catch (e: Exception) {
+            null
         }
     }
 
-    val username: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[USERNAME_KEY]?.let { decrypt(it) }
-    }
-
-    suspend fun savePassword(password: String) {
+    suspend fun saveProfile(profile: ServerProfile) {
         context.dataStore.edit { prefs ->
-            prefs[PASSWORD_KEY] = encrypt(password)
+            // Retrieve existing
+            val existingJson = prefs[SERVER_PROFILES_KEY]?.let { decrypt(it) }
+            val profiles = try {
+                if (existingJson != null) json.decodeFromString<List<ServerProfile>>(existingJson).toMutableList()
+                else mutableListOf()
+            } catch (e: Exception) {
+                mutableListOf()
+            }
+
+            // Update or add
+            val index = profiles.indexOfFirst { it.id == profile.id }
+            if (index != -1) {
+                profiles[index] = profile
+            } else {
+                profiles.add(profile)
+            }
+
+            prefs[SERVER_PROFILES_KEY] = encrypt(json.encodeToString(profiles))
         }
     }
 
-    val password: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[PASSWORD_KEY]?.let { decrypt(it) }
-    }
-
-    suspend fun saveCustomHeader(header: String) {
+    suspend fun setActiveServerId(id: String) {
         context.dataStore.edit { prefs ->
-            prefs[CUSTOM_HEADER_KEY] = encrypt(header)
+            prefs[ACTIVE_SERVER_ID_KEY] = encrypt(id)
         }
     }
 
-    val customHeader: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[CUSTOM_HEADER_KEY]?.let { decrypt(it) }
-    }
-
-    suspend fun saveAuthToken(token: String) {
+    suspend fun deleteProfile(id: String) {
         context.dataStore.edit { prefs ->
-            prefs[AUTH_TOKEN_KEY] = encrypt(token)
+            val existingJson = prefs[SERVER_PROFILES_KEY]?.let { decrypt(it) }
+            val profiles = try {
+                if (existingJson != null) json.decodeFromString<List<ServerProfile>>(existingJson).toMutableList()
+                else mutableListOf()
+            } catch (e: Exception) {
+                mutableListOf()
+            }
+
+            profiles.removeAll { it.id == id }
+            prefs[SERVER_PROFILES_KEY] = encrypt(json.encodeToString(profiles))
+
+            // If active profile was deleted, clear active
+            val activeId = prefs[ACTIVE_SERVER_ID_KEY]?.let { decrypt(it) }
+            if (activeId == id) {
+                prefs.remove(ACTIVE_SERVER_ID_KEY)
+                // Optionally set to the first available profile if any
+                if (profiles.isNotEmpty()) {
+                    prefs[ACTIVE_SERVER_ID_KEY] = encrypt(profiles.first().id)
+                }
+            }
         }
     }
 
-    val authToken: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[AUTH_TOKEN_KEY]?.let { decrypt(it) }
-    }
-    
-    suspend fun clear() {
+    suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 
     companion object {
-        private val SERVER_URL_KEY = stringPreferencesKey("server_url")
-        private val USERNAME_KEY = stringPreferencesKey("username")
-        private val PASSWORD_KEY = stringPreferencesKey("password")
-        private val CUSTOM_HEADER_KEY = stringPreferencesKey("custom_header")
-        private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
+        private val SERVER_PROFILES_KEY = stringPreferencesKey("server_profiles_v2")
+        private val ACTIVE_SERVER_ID_KEY = stringPreferencesKey("active_server_id_v2")
     }
 }

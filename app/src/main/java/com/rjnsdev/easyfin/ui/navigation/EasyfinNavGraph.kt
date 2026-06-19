@@ -28,6 +28,9 @@ fun EasyfinNavGraph() {
                     navController.navigate("auth") {
                         popUpTo("dashboard") { inclusive = true }
                     }
+                },
+                onAddNewServer = {
+                    navController.navigate("auth")
                 }
             )
         }

@@ -2,6 +2,7 @@ package com.rjnsdev.easyfin.data.repository
 
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.rjnsdev.easyfin.data.local.SecureStorage
+import com.rjnsdev.easyfin.data.local.ServerProfile
 import com.rjnsdev.easyfin.data.remote.AuthRequest
 import com.rjnsdev.easyfin.data.remote.JellyfinApi
 import kotlinx.coroutines.flow.firstOrNull
@@ -9,6 +10,8 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
+import java.util.UUID
+
 class AuthRepository(
     private val secureStorage: SecureStorage,
     private val okHttpClient: OkHttpClient,
@@ -27,8 +30,6 @@ class AuthRepository(
 
             val api = retrofit.create(JellyfinApi::class.java)
 
-            // Basic Jellyfin auth header formatting
-            // In a real app this includes Device, DeviceId, Version, etc.
             val authHeaderPrefix = "MediaBrowser Client=\"Easyfin\", Device=\"Android\", DeviceId=\"device123\", Version=\"1.0\""
             val authHeader = if (!customHeader.isNullOrBlank()) {
                 "$authHeaderPrefix, $customHeader"
@@ -39,17 +40,22 @@ class AuthRepository(
             val response = api.authenticate(authHeader, request)
             if (response.isSuccessful) {
                 val authResponse = response.body()
-                if (authResponse != null) {
-                    secureStorage.saveServerUrl(baseUrl)
-                    secureStorage.saveUsername(request.Username)
-                    secureStorage.savePassword(request.Pw)
-                    if (!customHeader.isNullOrBlank()) {
-                        secureStorage.saveCustomHeader(customHeader)
-                    }
-                    secureStorage.saveAuthToken(authResponse.AccessToken)
+                if (authResponse != null && authResponse.User != null) {
+                    val serverId = UUID.randomUUID().toString()
+                    val profile = ServerProfile(
+                        id = serverId,
+                        name = authResponse.User.Name,
+                        url = baseUrl,
+                        username = request.Username,
+                        userId = authResponse.User.Id,
+                        accessToken = authResponse.AccessToken,
+                        customHeader = customHeader ?: ""
+                    )
+                    secureStorage.saveProfile(profile)
+                    secureStorage.setActiveServerId(serverId)
                     Result.success(Unit)
                 } else {
-                    Result.failure(Exception("Empty response body"))
+                    Result.failure(Exception("Empty response body or missing User info"))
                 }
             } else {
                 Result.failure(Exception("Authentication failed: ${response.code()}"))
@@ -61,11 +67,18 @@ class AuthRepository(
     }
 
     suspend fun isLoggedIn(): Boolean {
-        val token = secureStorage.authToken.firstOrNull()
-        return !token.isNullOrBlank()
+        val activeId = secureStorage.activeServerId.firstOrNull()
+        return !activeId.isNullOrBlank()
     }
     
-    suspend fun logout() {
-        secureStorage.clear()
+    suspend fun logoutActive() {
+        val activeId = secureStorage.activeServerId.firstOrNull()
+        if (activeId != null) {
+            secureStorage.deleteProfile(activeId)
+        }
+    }
+
+    suspend fun logoutAll() {
+        secureStorage.clearAll()
     }
 }

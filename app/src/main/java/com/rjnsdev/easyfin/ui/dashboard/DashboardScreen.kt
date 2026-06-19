@@ -22,7 +22,8 @@ data class BottomNavItem(val route: String, val title: String, val icon: ImageVe
 
 @Composable
 fun DashboardScreen(
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onAddNewServer: () -> Unit
 ) {
     val navController = rememberNavController()
     
@@ -41,7 +42,10 @@ fun DashboardScreen(
                 CollectionScreen()
             }
             composable("settings") {
-                SettingsScreen(onLogout = onLogout)
+                SettingsScreen(
+                    onLogoutAll = onLogout,
+                    onAddNewServer = onAddNewServer
+                )
             }
         }
     }
